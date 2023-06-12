@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2023 Weston Schmidt <weston_schmidt@alumni.purdue.edu>
+# SPDX-License-Identifier: Apache-2.0
+---
+# Please keep alphabetized 
+allowed:
+  - mit
+  - apache-2.0
+  - bsd-3-clause
+
+# Please keep alphabetized & on the far right, call out the specific license(s)
+# that apply.  Use the spdx license name for consistency.
+reviewed:
+  go:
+    - github.com/cloudflare/circl/**          # BSD-3-Clause license
+    - github.com/cloudflare/circl/**/**       # BSD-3-Clause license
+    - github.com/cloudflare/circl/**/**/**    # BSD-3-Clause license
+    - github.com/google/go-github/**          # BSD-3-Clause license
+    - github.com/google/go-github/**/**       # BSD-3-Clause license
+    - github.com/ProtonMail/go-crypto/**      # BSD-3-Clause license
+    - github.com/ProtonMail/go-crypto/**/**   # BSD-3-Clause license
+    - golang.org/x/crypto/**                  # BSD-3-Clause license
+    - golang.org/x/crypto/**/**               # BSD-3-Clause license

@@ -1,0 +1,271 @@
+# SPDX-FileCopyrightText: 2023 Weston Schmidt <weston_schmidt@alumni.purdue.edu>
+# SPDX-License-Identifier: Apache-2.0
+# Based on https://github.com/goschtalt/.github/.github/workflows/ci.yml
+---
+name: 'CI Verification'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'testing/**'
+    tags:
+      - 'v*'
+
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  go-version: '^1.20.x'
+  linter-version: 'latest'
+  linter-timeout: '5m'
+
+jobs:
+  test:
+    needs: [ style, lint, reuse ]
+    strategy:
+      matrix:
+        os: [ 'ubuntu-latest', 'macos-latest', 'windows-latest' ]
+        go: ['1.18', '1.20']
+    runs-on: ${{ matrix.os }}
+    name: Build & Test
+
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      - name: Setup go version
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Build & Test (no race)
+        if: |
+          matrix.os == 'windows-latest'
+        run: |
+          go get   ./...
+          go build ./...
+          go test  ./...
+
+      - name: Build & Test (with race)
+        if: |
+          matrix.os != 'windows-latest'
+        run: |
+          go build      ./...
+          go test -race ./...
+        env:
+          ACCEPTANCE_TESTS=run
+          GH_TOKEN=${{ secrets.ACCEPTANCE_TOKEN }}
+
+
+  coverage:
+    runs-on: [ 'ubuntu-latest' ]
+    name: Build & Test & Report Coverage
+
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      - name: Setup go version
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: ${{ env.go-version }}
+
+      - name: Unit Tests Coverage
+        run: |
+          go get ./...
+          go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      # Upload the results of code coverage once
+
+      - name: Send results to codecov.io
+        uses: codecov/codecov-action@894ff025c7b54547a9a2a1e9f228beae737ad3c2 # v3.1.3
+        with:
+          flags: unittests
+          files: >-
+            ./coverage.out
+
+      - name: With Acceptance Tests Coverage
+        run: |
+          go get ./...
+          go test -race -covermode=atomic -coverprofile=coverage.out ./...
+        env:
+          ACCEPTANCE_TESTS=run
+          GH_TOKEN=${{ secrets.ACCEPTANCE_TOKEN }}
+
+      # Upload the results of code coverage once
+
+      - name: Send results to codecov.io
+        uses: codecov/codecov-action@894ff025c7b54547a9a2a1e9f228beae737ad3c2 # v3.1.3
+        with:
+          flags: unittests,acceptance
+          files: >-
+            ./coverage.out
+
+
+  style:
+    name: Check code style
+    runs-on: [ 'ubuntu-latest' ]
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      - name: Setup go version
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: ${{ env.go-version }}
+
+      - name: Run gofmt
+        shell: bash
+        run: |
+          gofmt -d $(find . -path ./vendor -prune -o -name '*.go' -print) > fmt.patch
+          # Error check & fail if any format mismatches are detected.
+          if [ $(wc fmt.patch | awk '{print $1}') -ne 0 ]; then
+            cat fmt.patch;
+            exit 1;
+          fi
+
+
+  lint:
+    name: Golint Checking
+    runs-on: [ 'ubuntu-latest' ]
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      - name: Setup go version
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: ${{ env.go-version }}
+
+      - name: Lint Entire Repo
+        if: github.event_name != 'pull_request'
+        uses: golangci/golangci-lint-action@08e2f20817b15149a52b5b3ebe7de50aff2ba8c5 # v3.4.0
+        with:
+          version:           ${{ env.linter-version }}
+          args:    --timeout ${{ env.linter-timeout }}
+
+
+  reuse:
+    name: REUSE Checking
+    runs-on: [ 'ubuntu-latest' ]
+    steps: 
+    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+    - name: REUSE Compliance Check
+      uses: fsfe/reuse-action@e7a435374d26d54b324fa6699d8eafb076340dfd # v1.2.0
+
+
+  license:
+    name: License Checking
+    runs-on: [ 'ubuntu-latest' ]
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      - name: Setup go version
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: ${{ env.go-version }}
+
+      # setup ruby environment before running jonabc/setup-licensed
+      - uses: ruby/setup-ruby@d2b39ad0b52eca07d23f3aa14fdf2a3fcc1f411c # v1.148.0
+        with:
+          ruby-version: ruby
+
+      - name: Setup licensed
+        uses: jonabc/setup-licensed@d6b3a6f7058c2b40c06d205e13e15c2418977566 # v1.1.4
+        with:
+         version: 4.x
+         dependabot_skip:    true
+         cleanup_on_success: true
+         github_token:       ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run licensed cache
+        run: |
+          go get ./...
+          licensed cache
+
+      - name: Validate compliance
+        run: |
+          licensed status -f yaml > licensing.yml || true
+          yq eval 'del(.apps[].sources[].dependencies[] | select(.allowed == "true") )' licensing.yml > disallowed.yml
+          licensed status
+
+      - name: Archive license results
+        if: always()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: licensing
+          path: |
+            ./licensing.yml
+            ./disallowed.yml
+
+
+  goreportcard:
+    name: Update goreportcard.com
+    runs-on: [ 'ubuntu-latest' ]
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      - name: 'Update the results on goreportcard.com'
+        run: |
+          curl -s -o /dev/null -L \
+            --max-time    10 \
+            --retry       5 \
+            --retry-delay 1 \
+            -w "HTTP Status: %{http_code}\n" \
+            -X POST -F "repo=github.com/${{ github.repository }}" https://goreportcard.com/checks
+
+
+  release:
+    name: Release
+    needs: [ test, style, lint, reuse, license ]
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags for TagBody, TagSubject and TagContents
+        run: git fetch --force --tags
+
+      - name: Setup go version
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: ${{ env.go-version }}
+
+      # To let testing take us as far as possible, only filter this step out.
+      - uses: goreleaser/goreleaser-action@f82d6c1c344bcacabba2c841718984797f664a6b # v4.2.0
+        if: success() && startsWith(github.ref, 'refs/tags/')
+        with:
+          distribution: goreleaser
+          version:      latest
+          args:         release --clean --skip-validate
+        env:
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
+          GITHUB_TOKEN:           ${{ secrets.GITHUB_TOKEN }}
+
+  all_passed:
+    needs: [ coverage, license, lint, release, reuse, style, test ]
+    if: always()
+    name: All checks passed check.
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Fail unless required checks pass
+        if: |
+          needs.coverage.result == 'failure' ||
+          needs.license.result  == 'failure' ||
+          needs.lint.result     == 'failure' ||
+          needs.release.result  == 'failure' ||
+          needs.reuse.result    == 'failure' ||
+          needs.style.result    == 'failure'
+        run: exit 1
+      - run: 'echo "✅ All required jobs have passed!"'
