@@ -8,9 +8,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '.github/workflows/**'
-      - 'testing/**'
     tags:
       - 'v*'
 
@@ -59,8 +56,8 @@ jobs:
           go build      ./...
           go test -race ./...
         env:
-          ACCEPTANCE_TESTS=run
-          GH_TOKEN=${{ secrets.ACCEPTANCE_TOKEN }}
+          ACCEPTANCE_TESTS: run
+          GH_TOKEN: ${{ secrets.ACCEPTANCE_TOKEN }}
 
 
   coverage:
@@ -95,8 +92,8 @@ jobs:
           go get ./...
           go test -race -covermode=atomic -coverprofile=coverage.out ./...
         env:
-          ACCEPTANCE_TESTS=run
-          GH_TOKEN=${{ secrets.ACCEPTANCE_TOKEN }}
+          ACCEPTANCE_TESTS: run
+          GH_TOKEN: ${{ secrets.ACCEPTANCE_TOKEN }}
 
       # Upload the results of code coverage once
 
