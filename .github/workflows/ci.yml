@@ -86,7 +86,8 @@ jobs:
           flags: unittests
           files: >-
             ./coverage.out
-        env: CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: With Acceptance Tests Coverage
         run: |
@@ -104,7 +105,8 @@ jobs:
           flags: unittests,acceptance
           files: >-
             ./coverage.out
-        env: CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 
   style:
