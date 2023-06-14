@@ -46,6 +46,10 @@ func (m *Manager) GetSecret(ctx context.Context, name string) (*github.Secret, *
 		return nil, resp, err
 	}
 
+	if name == "" {
+		return nil, nil, fmt.Errorf("%w: name must not be empty", ErrUnable)
+	}
+
 	s, resp, err := m.gh.GetSecret(ctx, *m, name)
 	if err != nil && resp.StatusCode == http.StatusNotFound {
 		err = nil
@@ -57,6 +61,10 @@ func (m *Manager) UpdateSecret(ctx context.Context, name, value string) (*github
 	resp, err := m.config(ctx)
 	if err != nil {
 		return resp, err
+	}
+
+	if name == "" {
+		return nil, fmt.Errorf("%w: name must not be empty", ErrUnable)
 	}
 
 	if m.public == nil {
@@ -89,6 +97,10 @@ func (m *Manager) DeleteSecret(ctx context.Context, name string) (*github.Respon
 	resp, err := m.config(ctx)
 	if err != nil {
 		return resp, err
+	}
+
+	if name == "" {
+		return nil, fmt.Errorf("%w: name must not be empty", ErrUnable)
 	}
 
 	return m.gh.DeleteSecret(ctx, *m, name)
