@@ -3,7 +3,7 @@ module github.com/schmidtw/ghsecretmgr
 go 1.20
 
 require (
-	github.com/google/go-github/v53 v53.0.0
+	github.com/google/go-github/v53 v53.2.0
 	github.com/jefflinse/githubsecret v1.0.2
 	github.com/migueleliasweb/go-github-mock v0.0.18
 	github.com/stretchr/testify v1.8.4
